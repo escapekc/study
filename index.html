@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>去到你想去的地方</title>
+    <title>高级专注力计时器</title>
     <style>
         :root { --bg-color: #121212; --primary-text-color: #E0E0E0; --secondary-text-color: #B0B0B0; --accent-color: #4CAF50; --panel-bg-color: #1E1E1E; --border-color: #333; --danger-color: #F44336; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,7 +12,6 @@
         .timer-display-area { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         #timer-display { font-size: clamp(6rem, 25vw, 12rem); font-weight: bold; line-height: 1; transition: opacity 0.3s ease; }
         #timer-display.hidden { opacity: 0; }
-        /* 新增: 小憩计时器样式 */
         #short-break-timer {
             font-size: clamp(1.5rem, 6vw, 2.5rem);
             color: var(--accent-color);
@@ -20,11 +19,9 @@
             bottom: -35px;
             opacity: 0;
             transition: opacity 0.3s ease;
-            pointer-events: none; /* 不阻挡下方元素 */
+            pointer-events: none;
         }
-        #short-break-timer.visible {
-            opacity: 1;
-        }
+        #short-break-timer.visible { opacity: 1; }
         #status-message, #round-indicator { font-size: clamp(1.2rem, 4vw, 1.8rem); color: var(--secondary-text-color); min-height: 2.5rem; padding: 0 10px; }
         #motivation-quote { font-size: clamp(1rem, 3.5vw, 1.5rem); color: var(--accent-color); font-style: italic; min-height: 60px; display: flex; align-items: center; justify-content: center; padding: 0 15px; }
         #settings-panel { background-color: var(--panel-bg-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px; transition: opacity 0.5s, transform 0.5s; }
@@ -52,13 +49,11 @@
         <div class="timer-display-area">
             <div id="round-indicator"></div>
             <div id="timer-display">00:00</div>
-            <!-- 新增: 小憩计时器容器 -->
             <div id="short-break-timer"></div> 
             <div id="status-message">请设置参数后开始</div>
             <div id="motivation-quote"></div>
         </div>
         <div id="settings-panel">
-            <!-- (设置面板内容保持不变) -->
             <div class="setting-item"><label for="work-duration">每轮时长 (分钟):</label><input type="number" id="work-duration" value="100" min="0.1" step="0.1"></div>
             <div class="setting-item"><label for="random-min">随机提示 (分钟):</label><div><input type="number" id="random-min" value="2" min="0" step="0.1"><span>到</span><input type="number" id="random-max" value="5" min="0" step="0.1"></div></div>
             <div class="setting-item"><label for="short-break">间歇休息 (秒):</label><input type="number" id="short-break" value="10" min="1"></div>
@@ -75,13 +70,12 @@
     
     <audio id="high-pitch-sound" src="high.mp3" preload="auto"></audio>
     <audio id="low-pitch-sound" src="low.mp3" preload="auto"></audio>
-    <!-- 新增: 用于后台保活的无声音频 -->
-    <audio id="silent-audio" src="silent.mp3" loop preload="auto"></audio>
+    <!-- 已移除 silent-audio 标签 -->
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const dom = {
-                timerDisplay: document.getElementById('timer-display'), shortBreakTimer: document.getElementById('short-break-timer'), statusMessage: document.getElementById('status-message'), roundIndicator: document.getElementById('round-indicator'), motivationQuote: document.getElementById('motivation-quote'), settingsPanel: document.getElementById('settings-panel'), startBtn: document.getElementById('start-btn'), pauseBtn: document.getElementById('pause-btn'), resetBtn: document.getElementById('reset-btn'), highPitchSound: document.getElementById('high-pitch-sound'), lowPitchSound: document.getElementById('low-pitch-sound'), silentAudio: document.getElementById('silent-audio'), workDurationInput: document.getElementById('work-duration'), randomMinInput: document.getElementById('random-min'), randomMaxInput: document.getElementById('random-max'), shortBreakInput: document.getElementById('short-break'), totalRoundsInput: document.getElementById('total-rounds'), longBreakInput: document.getElementById('long-break'), showTimerToggle: document.getElementById('show-timer-toggle')
+                timerDisplay: document.getElementById('timer-display'), shortBreakTimer: document.getElementById('short-break-timer'), statusMessage: document.getElementById('status-message'), roundIndicator: document.getElementById('round-indicator'), motivationQuote: document.getElementById('motivation-quote'), settingsPanel: document.getElementById('settings-panel'), startBtn: document.getElementById('start-btn'), pauseBtn: document.getElementById('pause-btn'), resetBtn: document.getElementById('reset-btn'), highPitchSound: document.getElementById('high-pitch-sound'), lowPitchSound: document.getElementById('low-pitch-sound'), workDurationInput: document.getElementById('work-duration'), randomMinInput: document.getElementById('random-min'), randomMaxInput: document.getElementById('random-max'), shortBreakInput: document.getElementById('short-break'), totalRoundsInput: document.getElementById('total-rounds'), longBreakInput: document.getElementById('long-break'), showTimerToggle: document.getElementById('show-timer-toggle')
             };
 
             let currentState = 'idle';
@@ -93,14 +87,13 @@
 
             const motivationalQuotes = ["休息一下，是为了走更远的路。闭上眼，深呼吸。", "放下手机，让大脑回归宁静。", "此刻，世界与你无关。只关注自己的呼吸。", "冥想片刻，给思绪一次清扫。", "听一首舒缓的音乐，让心灵去旅行。", "拉伸一下身体，活动一下筋骨。", "成功的路上，休息也是一种策略。", "不要被短暂的娱乐绑架，你的目标更重要。", "每一次专注，都是一次自我超越。", "闭目养神，积蓄下一次爆发的力量。", "远离屏幕，看看窗外的风景。", "一杯温水，一份宁静。", "坚持就是胜利，但聪明的坚持包含休息。"];
             
-            let timerWorker = new Worker('worker.js');
+            let timerWorker = new Worker('worker.js'); // worker.js 保持不变，它本身不依赖无声音频
 
             timerWorker.onmessage = (e) => {
                 if (currentState === 'idle' || currentState === 'paused') return;
                 const { type, state: endedState } = e.data;
                 
                 if (type === 'tick') {
-                    // UI改动: 如果在小憩，只更新小计时器，否则更新大计时器
                     if (currentState === 'short_break') {
                         dom.shortBreakTimer.textContent = `小憩: ${e.data.remainingSeconds}s`;
                     } else {
@@ -110,7 +103,7 @@
                     switch (endedState) {
                         case 'working':
                             playSound(dom.highPitchSound);
-                            clearTimeout(randomPingTimeout); // 确保旧的随机计时器被清除
+                            clearTimeout(randomPingTimeout);
                             if (currentRound < sessionSettings.totalRounds) {
                                 currentRound++;
                                 startLongBreak();
@@ -124,7 +117,6 @@
                             break;
                         case 'short_break':
                             playSound(dom.highPitchSound);
-                            // UI改动: 隐藏小计时器
                             dom.shortBreakTimer.classList.remove('visible');
                             resumeWorkSession();
                             break;
@@ -180,7 +172,7 @@
                 clearTimeout(randomPingTimeout);
                 playSound(dom.lowPitchSound);
                 remainingTimeOnPause = targetTime - Date.now();
-                setTimeout(startShortBreak, 100); // 延迟改为 100ms
+                setTimeout(startShortBreak, 100);
             }
 
             function startWorkSession() {
@@ -190,7 +182,6 @@
             }
 
             function startShortBreak() {
-                // UI改动: 显示小计时器
                 dom.shortBreakTimer.classList.add('visible');
                 startTimer(sessionSettings.shortBreak, 'short_break');
             }
@@ -215,7 +206,7 @@
                 clearTimeout(randomPingTimeout);
                 const durationInSeconds = (targetTime - Date.now()) / 1000;
                 const { randomMin, randomMax } = sessionSettings;
-                if (randomMin >= randomMax) return; // 避免无效范围
+                if (randomMin >= randomMax) return;
                 const randomDelaySeconds = Math.floor(Math.random() * (randomMax - randomMin + 1)) + randomMin;
                 if (randomDelaySeconds < durationInSeconds) {
                     randomPingTimeout = setTimeout(triggerRandomPing, randomDelaySeconds * 1000);
@@ -230,8 +221,6 @@
                 currentState = 'paused';
                 updateStatusText();
                 toggleControls(false, true);
-                // 暂停时也暂停无声音频
-                dom.silentAudio.pause();
             }
             
             function resumeTimer() {
@@ -241,8 +230,6 @@
                     scheduleRandomPing();
                 }
                 toggleControls(true);
-                // 恢复时播放无声音频
-                playSound(dom.silentAudio);
             }
 
             function resetTimer() {
@@ -255,10 +242,8 @@
                 updateStatusText();
                 dom.roundIndicator.textContent = "";
                 dom.motivationQuote.textContent = "";
-                dom.shortBreakTimer.classList.remove('visible'); // 清除小计时器
+                dom.shortBreakTimer.classList.remove('visible');
                 toggleControls(false);
-                // 重置时暂停无声音频
-                dom.silentAudio.pause();
             }
 
             function finishAllSessions() {
@@ -272,8 +257,6 @@
                 sessionSettings = getSettingsFromUI(); 
                 currentRound = 1;
                 playSound(dom.highPitchSound);
-                // 关键改动: 播放无声音频以保活
-                playSound(dom.silentAudio);
                 startWorkSession();
                 toggleControls(true);
             }
