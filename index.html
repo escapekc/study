@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高级专注力计时器</title>
+    <title>去到你想去的地方</title>
     <style>
         :root { --bg-color: #121212; --primary-text-color: #E0E0E0; --secondary-text-color: #B0B0B0; --accent-color: #4CAF50; --panel-bg-color: #1E1E1E; --border-color: #333; --danger-color: #F44336; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -92,9 +92,9 @@
             let currentRound = 1;
             let timePaused = 0;
             let targetTime = 0;
-            let remainingTimeOnPause = 0; // 用于暂停和恢复
+            let remainingTimeOnPause = 0;
             let sessionSettings = null; 
-            let randomPingTimeout = null; // 回归主线程的 setTimeout
+            let randomPingTimeout = null;
 
             const motivationalQuotes = ["休息一下，是为了走更远的路。闭上眼，深呼吸。", "放下手机，让大脑回归宁静。", "此刻，世界与你无关。只关注自己的呼吸。", "冥想片刻，给思绪一次清扫。", "听一首舒缓的音乐，让心灵去旅行。", "拉伸一下身体，活动一下筋骨。", "成功的路上，休息也是一种策略。", "不要被短暂的娱乐绑架，你的目标更重要。", "每一次专注，都是一次自我超越。", "闭目养神，积蓄下一次爆发的力量。", "远离屏幕，看看窗外的风景。", "一杯温水，一份宁静。", "坚持就是胜利，但聪明的坚持包含休息。"];
             
@@ -102,9 +102,7 @@
 
             timerWorker.onmessage = (e) => {
                 if (currentState === 'idle' || currentState === 'paused') return;
-
                 const { type, state: endedState } = e.data;
-                
                 if (type === 'tick') {
                     displayTime(e.data.remainingSeconds);
                 } else if (type === 'state_end') {
@@ -164,7 +162,7 @@
                     dom.roundIndicator.textContent = `第 ${currentRound} / ${sessionSettings.totalRounds} 轮`;
                 }
             }
-
+            
             function startTimer(duration, state) {
                 currentState = state;
                 updateStatusText();
@@ -172,10 +170,18 @@
                 timerWorker.postMessage({ command: 'start', data: { targetTime, state }});
             }
 
+            function triggerRandomPing() {
+                timerWorker.postMessage({ command: 'pause' }); // 命令worker暂停
+                clearTimeout(randomPingTimeout); // 清除主线程的随机计时器
+                playSound(dom.lowPitchSound);
+                remainingTimeOnPause = targetTime - Date.now();
+                setTimeout(startShortBreak, 200);
+            }
+
             function startWorkSession() {
-                clearTimeout(randomPingTimeout); // 清除旧的
+                dom.motivationQuote.textContent = ""; // 关键修正: 在开始工作时清除激励语
                 startTimer(sessionSettings.workDuration, 'working');
-                scheduleRandomPing(); // 设置新的
+                scheduleRandomPing();
             }
 
             function startShortBreak() {
@@ -183,7 +189,7 @@
             }
             
             function resumeWorkSession() {
-                clearTimeout(randomPingTimeout);
+                dom.motivationQuote.textContent = ""; // 关键修正: 恢复工作时也要清除激励语
                 startTimer(remainingTimeOnPause / 1000, 'working');
                 scheduleRandomPing();
             }
@@ -207,30 +213,22 @@
                     randomPingTimeout = setTimeout(triggerRandomPing, randomDelaySeconds * 1000);
                 }
             }
-            
-            function triggerRandomPing() {
-                // 关键修正: 先停止所有计时
-                timerWorker.postMessage({ command: 'pause' });
-                clearTimeout(randomPingTimeout);
-                
-                playSound(dom.lowPitchSound);
-                remainingTimeOnPause = targetTime - Date.now();
-                setTimeout(startShortBreak, 200);
-            }
 
             function pauseTimer() {
                 timerWorker.postMessage({ command: 'pause' });
                 clearTimeout(randomPingTimeout);
                 remainingTimeOnPause = targetTime - Date.now();
+                dom.pauseBtn.dataset.lastState = currentState; // 记录暂停前的状态
                 currentState = 'paused';
                 updateStatusText();
                 toggleControls(false, true);
             }
             
             function resumeTimer() {
-                startTimer(remainingTimeOnPause / 1000, dom.pauseBtn.dataset.lastState); // 恢复之前的状态
-                if(dom.pauseBtn.dataset.lastState === 'working') {
-                    scheduleRandomPing(); // 如果是恢复工作，重新安排随机提示
+                const previousState = dom.pauseBtn.dataset.lastState;
+                startTimer(remainingTimeOnPause / 1000, previousState);
+                if(previousState === 'working') {
+                    scheduleRandomPing();
                 }
                 toggleControls(true);
             }
@@ -255,7 +253,6 @@
                 resetTimer();
             }
             
-            // 总启动函数
             function startSession() {
                 sessionSettings = getSettingsFromUI(); 
                 currentRound = 1;
@@ -266,19 +263,10 @@
             
             dom.startBtn.addEventListener('click', () => {
                 if (currentState === 'idle') startSession();
-                else if (currentState === 'paused') {
-                    // 恢复时要记录旧状态
-                    dom.pauseBtn.dataset.lastState = currentState; 
-                    resumeTimer();
-                }
+                else if (currentState === 'paused') resumeTimer();
             });
 
-            dom.pauseBtn.addEventListener('click', () => {
-                 // 暂停时记录当前状态
-                dom.pauseBtn.dataset.lastState = currentState;
-                pauseTimer();
-            });
-
+            dom.pauseBtn.addEventListener('click', pauseTimer);
             dom.resetBtn.addEventListener('click', resetTimer);
             dom.showTimerToggle.addEventListener('change', () => dom.timerDisplay.classList.toggle('hidden', !dom.showTimerToggle.checked));
             document.querySelectorAll('#settings-panel input').forEach(input => {
