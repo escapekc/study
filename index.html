@@ -104,25 +104,9 @@
             const showTimerToggle = document.getElementById('show-timer-toggle');
 
             let mainInterval = null; let currentState = 'idle'; let targetTime = 0; let timePaused = 0; let currentRound = 1; let nextPingTime = 0;
-            let isAudioUnlocked = false;
             const motivationalQuotes = ["休息一下，是为了走更远的路。闭上眼，深呼吸。", "放下手机，让大脑回归宁静。", "此刻，世界与你无关。只关注自己的呼吸。", "冥想片刻，给思绪一次清扫。", "听一首舒缓的音乐，让心灵去旅行。", "拉伸一下身体，活动一下筋骨。", "成功的路上，休息也是一种策略。", "不要被短暂的娱乐绑架，你的目标更重要。", "每一次专注，都是一次自我超越。", "闭目养神，积蓄下一次爆发的力量。", "远离屏幕，看看窗外的风景。", "一杯温水，一份宁静。", "坚持就是胜利，但聪明的坚持包含休息。"];
 
-            function unlockAudio() {
-                if (isAudioUnlocked || !highPitchSound || !lowPitchSound) return;
-                try {
-                    highPitchSound.volume = 0;
-                    const highPromise = highPitchSound.play();
-                    lowPitchSound.volume = 0;
-                    const lowPromise = lowPitchSound.play();
-                    if (highPromise !== undefined) {
-                        highPromise.then(() => { highPitchSound.pause(); highPitchSound.volume = 1; }).catch(() => {});
-                    }
-                    if (lowPromise !== undefined) {
-                        lowPromise.then(() => { lowPitchSound.pause(); lowPitchSound.volume = 1; }).catch(() => {});
-                    }
-                    isAudioUnlocked = true;
-                } catch (e) {}
-            }
+            // 关键改动：删除了多余的 unlockAudio 函数
 
             function playSound(soundElement) {
                 if (!soundElement) return;
@@ -130,7 +114,12 @@
                 soundElement.volume = 1;
                 const playPromise = soundElement.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(error => console.error(`Error playing sound: ${soundElement.id}`, error));
+                    playPromise.catch(error => {
+                        // 我们不再关心 AbortError，因为它无害
+                        if (error.name !== 'AbortError') {
+                            console.error(`Error playing sound: ${soundElement.id}`, error);
+                        }
+                    });
                 }
             }
             
@@ -149,24 +138,21 @@
             function startWorkSession() { const settings = getSettings(); currentState = 'working'; targetTime = Date.now() + settings.workDuration * 1000; statusMessage.textContent = getStatusText(currentState); roundIndicator.textContent = `第 ${currentRound} / ${settings.totalRounds} 轮`; motivationQuote.textContent = ""; playSound(highPitchSound); scheduleRandomPing(); mainInterval = setInterval(tick, 250); }
             function startShortBreak() { currentState = 'short_break'; targetTime = Date.now() + getSettings().shortBreak * 1000; statusMessage.textContent = getStatusText(currentState); mainInterval = setInterval(tick, 250); }
             function startLongBreak() { const settings = getSettings(); if (settings.longBreak <= 0) { currentRound++; startWorkSession(); return; } currentState = 'long_break'; targetTime = Date.now() + settings.longBreak * 1000; statusMessage.textContent = getStatusText(currentState); motivationQuote.textContent = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]; mainInterval = setInterval(tick, 250); }
-            function resetTimer() { clearInterval(mainInterval); mainInterval = null; currentState = 'idle'; currentRound = 1; isAudioUnlocked = false; updateInitialDisplay(); statusMessage.textContent = "请设置参数后开始"; roundIndicator.textContent = ""; motivationQuote.textContent = ""; toggleControls(false); }
+            function resetTimer() { clearInterval(mainInterval); mainInterval = null; currentState = 'idle'; currentRound = 1; updateInitialDisplay(); statusMessage.textContent = "请设置参数后开始"; roundIndicator.textContent = ""; motivationQuote.textContent = ""; toggleControls(false); }
             function finishAllSessions() { statusMessage.textContent = "恭喜！所有轮次已完成！"; motivationQuote.textContent = "你做到了！给自己一个大大的赞赏！"; roundIndicator.textContent = ""; resetTimer(); }
             function startTimer() { currentState = 'idle'; currentRound = 1; startWorkSession(); toggleControls(true); }
 
+            // 关键改动：事件监听器变得非常简单
             startBtn.addEventListener('click', () => {
-                if (!isAudioUnlocked) unlockAudio();
                 if (currentState === 'idle') startTimer();
                 else if (currentState === 'paused') resumeTimer();
             });
 
             pauseBtn.addEventListener('click', pauseTimer);
             resetBtn.addEventListener('click', resetTimer);
-            
-            // 关键修正: 将错误的 'showToggle' 改回 'showTimerToggle'
             showTimerToggle.addEventListener('change', () => {
                 timerDisplay.classList.toggle('hidden', !showTimerToggle.checked);
             });
-
             document.querySelectorAll('#settings-panel input').forEach(input => {
                 input.addEventListener('input', () => { if (currentState === 'idle') updateInitialDisplay(); });
             });
