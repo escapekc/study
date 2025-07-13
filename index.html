@@ -3,19 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高级专注力计时器 (最终修复版)</title>
+    <title>高级专注力计时器</title>
     <style>
-        /* CSS样式保持不变，此处省略 */
-        :root{--bg-color:#121212;--primary-text-color:#E0E0E0;--secondary-text-color:#B0B0B0;--accent-color:#4CAF50;--panel-bg-color:#1E1E1E;--border-color:#333;--danger-color:#F44336;}*{margin:0;padding:0;box-sizing:border-box;}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background-color:var(--bg-color);color:var(--primary-text-color);display:flex;justify-content:center;align-items:center;min-height:100vh;text-align:center;padding:15px;}.app-container{width:100%;max-width:600px;display:flex;flex-direction:column;gap:25px;}.timer-display-area{display:flex;flex-direction:column;align-items:center;justify-content:center;}#timer-display{font-size:clamp(6rem, 25vw, 12rem);font-weight:bold;line-height:1;transition:opacity .3s ease;}#timer-display.hidden{opacity:0;}#status-message,#round-indicator{font-size:clamp(1.2rem, 4vw, 1.8rem);color:var(--secondary-text-color);min-height:2.5rem;padding:0 10px;}#motivation-quote{font-size:clamp(1rem, 3.5vw, 1.5rem);color:var(--accent-color);font-style:italic;min-height:60px;display:flex;align-items:center;justify-content:center;padding:0 15px;}#settings-panel{background-color:var(--panel-bg-color);padding:20px;border-radius:12px;border:1px solid var(--border-color);display:flex;flex-direction:column;gap:15px;transition:opacity .5s,transform .5s;}.setting-item{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}.setting-item label{font-size:1rem;text-align:left;flex-shrink:0;}.setting-item input[type=number]{width:70px;padding:8px;background-color:var(--bg-color);color:var(--primary-text-color);border:1px solid var(--border-color);border-radius:6px;text-align:center;font-size:1rem;}.setting-item input[type=number]::-webkit-inner-spin-button,.setting-item input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}.setting-item input[type=number]{-moz-appearance:textfield;}.setting-item.checkbox-item{justify-content:flex-start;gap:15px;}input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent-color);}#controls{display:flex;justify-content:center;gap:15px;flex-wrap:wrap;}.control-btn{padding:12px 25px;font-size:1.1rem;border:none;border-radius:8px;cursor:pointer;transition:background-color .3s,transform .1s;color:#fff;font-weight:bold;}#start-btn{background-color:var(--accent-color);}#start-btn:hover{background-color:#5cb85c;}#pause-btn{background-color:#f0ad4e;display:none;}#pause-btn:hover{background-color:#eea236;}#reset-btn{background-color:var(--danger-color);display:none;}#reset-btn:hover{background-color:#d43f3a;}.control-btn:active{transform:scale(.95);}
+        :root {
+            --bg-color: #121212;
+            --primary-text-color: #E0E0E0;
+            --secondary-text-color: #B0B0B0;
+            --accent-color: #4CAF50;
+            --panel-bg-color: #1E1E1E;
+            --border-color: #333;
+            --danger-color: #F44336;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 15px;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .timer-display-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #timer-display {
+            font-size: clamp(6rem, 25vw, 12rem);
+            font-weight: bold;
+            line-height: 1;
+            transition: opacity 0.3s ease;
+        }
+        #timer-display.hidden { opacity: 0; }
+        #status-message, #round-indicator {
+            font-size: clamp(1.2rem, 4vw, 1.8rem);
+            color: var(--secondary-text-color);
+            min-height: 2.5rem;
+            padding: 0 10px;
+        }
+        #motivation-quote {
+            font-size: clamp(1rem, 3.5vw, 1.5rem);
+            color: var(--accent-color);
+            font-style: italic;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 15px;
+        }
+        #settings-panel {
+            background-color: var(--panel-bg-color);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .setting-item label {
+            font-size: 1rem;
+            text-align: left;
+            flex-shrink: 0;
+        }
+        .setting-item input[type="number"] {
+            width: 70px;
+            padding: 8px;
+            background-color: var(--bg-color);
+            color: var(--primary-text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1rem;
+        }
+        .setting-item input[type="number"]::-webkit-inner-spin-button, .setting-item input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .setting-item input[type="number"] { -moz-appearance: textfield; }
+        .setting-item.checkbox-item { justify-content: flex-start; gap: 15px; }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-color);
+        }
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .control-btn {
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            color: white;
+            font-weight: bold;
+        }
+        #start-btn { background-color: var(--accent-color); }
+        #start-btn:hover { background-color: #5cb85c; }
+        #pause-btn { background-color: #f0ad4e; display: none; }
+        #pause-btn:hover { background-color: #eea236; }
+        #reset-btn { background-color: var(--danger-color); display: none; }
+        #reset-btn:hover { background-color: #d43f3a; }
+        .control-btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
-    <!-- HTML结构保持不变 -->
+    
     <div class="app-container">
-        <!-- ... (和之前一样) ... -->
+        <div class="timer-display-area">
+            <div id="round-indicator"></div>
+            <div id="timer-display">00:00</div>
+            <div id="status-message">请设置参数后开始</div>
+            <div id="motivation-quote"></div>
+        </div>
+        <div id="settings-panel">
+            <div class="setting-item">
+                <label for="work-duration">每轮时长 (分钟):</label>
+                <input type="number" id="work-duration" value="100" min="1">
+            </div>
+            <div class="setting-item">
+                <label for="random-min">随机提示 (分钟):</label>
+                <div>
+                    <input type="number" id="random-min" value="2" min="1">
+                    <span>到</span>
+                    <input type="number" id="random-max" value="5" min="1">
+                </div>
+            </div>
+            <div class="setting-item">
+                <label for="short-break">间歇休息 (秒):</label>
+                <input type="number" id="short-break" value="10" min="1">
+            </div>
+            <div class="setting-item">
+                <label for="total-rounds">总轮数:</label>
+                <input type="number" id="total-rounds" value="1" min="1">
+            </div>
+            <div class="setting-item">
+                <label for="long-break">轮间休息 (分钟):</label>
+                <input type="number" id="long-break" value="20" min="0">
+            </div>
+             <div class="setting-item checkbox-item">
+                <input type="checkbox" id="show-timer-toggle" checked>
+                <label for="show-timer-toggle">显示倒计时</label>
+            </div>
+        </div>
+        <div id="controls">
+            <button id="start-btn" class="control-btn">开始</button>
+            <button id="pause-btn" class="control-btn">暂停</button>
+            <button id="reset-btn" class="control-btn">重置</button>
+        </div>
     </div>
     
-    <!-- 关键改动: 换回稳定、可靠的外部音频链接 -->
     <audio id="high-pitch-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3" preload="auto"></audio>
     <audio id="low-pitch-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto"></audio>
 
@@ -49,15 +206,13 @@
             function unlockAudio() {
                 if (isAudioUnlocked || !highPitchSound || !lowPitchSound) return;
                 
-                console.log("Attempting to unlock audio...");
                 try {
-                    highPitchSound.volume = 0; // Play silently
+                    highPitchSound.volume = 0;
                     const highPromise = highPitchSound.play();
                     
-                    lowPitchSound.volume = 0; // Play silently
+                    lowPitchSound.volume = 0;
                     const lowPromise = lowPitchSound.play();
                     
-                    // Once played (even silently), pause them and reset volume.
                     if (highPromise !== undefined) {
                         highPromise.then(() => {
                             highPitchSound.pause();
@@ -79,21 +234,15 @@
             }
 
             function playSound(soundElement) {
-                if (!soundElement) {
-                    console.error("playSound called with a null element.");
-                    return;
-                }
+                if (!soundElement) return;
                 soundElement.currentTime = 0;
-                soundElement.volume = 1; // Ensure volume is full
+                soundElement.volume = 1;
                 const playPromise = soundElement.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.error(`Error playing sound: ${soundElement.id}`, error);
-                    });
+                    playPromise.catch(error => console.error(`Error playing sound: ${soundElement.id}`, error));
                 }
             }
             
-            // --- 核心逻辑函数 (这部分无需改动) ---
             function getSettings() { const workDuration = parseInt(workDurationInput.value) * 60; const randomMin = parseInt(randomMinInput.value) * 60; const randomMax = parseInt(randomMaxInput.value) * 60; return { workDuration: isNaN(workDuration) || workDuration < 60 ? 100 * 60 : workDuration, randomMin: isNaN(randomMin) || randomMin < 1 ? 2 * 60 : randomMin, randomMax: isNaN(randomMax) || randomMax < randomMin ? 5 * 60 : randomMax, shortBreak: parseInt(shortBreakInput.value) || 10, totalRounds: parseInt(totalRoundsInput.value) || 1, longBreak: parseInt(longBreakInput.value) * 60 || 20 * 60, }; }
             function displayTime(seconds) { const mins = Math.floor(seconds / 60); const secs = seconds % 60; timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`; }
             function updateInitialDisplay() { const settings = getSettings(); displayTime(settings.workDuration); }
@@ -113,26 +262,19 @@
             function finishAllSessions() { statusMessage.textContent = "恭喜！所有轮次已完成！"; motivationQuote.textContent = "你做到了！给自己一个大大的赞赏！"; roundIndicator.textContent = ""; resetTimer(); }
             function startTimer() { currentState = 'idle'; currentRound = 1; startWorkSession(); toggleControls(true); }
 
-            // --- 绑定事件监听器 ---
             startBtn.addEventListener('click', () => {
-                if (!isAudioUnlocked) {
-                    unlockAudio();
-                }
-                if (currentState === 'idle') {
-                    startTimer();
-                } else if (currentState === 'paused') {
-                    resumeTimer();
-                }
+                if (!isAudioUnlocked) unlockAudio();
+                if (currentState === 'idle') startTimer();
+                else if (currentState === 'paused') resumeTimer();
             });
 
             pauseBtn.addEventListener('click', pauseTimer);
             resetBtn.addEventListener('click', resetTimer);
             showTimerToggle.addEventListener('change', () => { timerDisplay.classList.toggle('hidden', !showTimerToggle.checked); });
             document.querySelectorAll('#settings-panel input').forEach(input => {
-                input.addEventListener('input', () => { if (currentState === 'idle') { updateInitialDisplay(); } });
+                input.addEventListener('input', () => { if (currentState === 'idle') updateInitialDisplay(); });
             });
             
-            // --- 初始化页面显示 ---
             updateInitialDisplay();
         });
     </script>
