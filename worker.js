@@ -1,67 +1,29 @@
-// --- worker.js ---
+// --- worker.js (全新架构版，单一职责) ---
 
 let timerTimeout = null;
-let targetTime = 0;
-let nextPingTime = 0;
-let currentState = 'idle'; // working, short_break, long_break, paused
 
-// 智能计时器核心
-function tick() {
+function tick(targetTime, state) {
     const now = Date.now();
     const remainingMilliseconds = targetTime - now;
 
     if (remainingMilliseconds <= 0) {
-        self.postMessage({ type: 'tick', remainingSeconds: 0 }); // 发送最后一次0秒的报告
-        self.postMessage({ type: 'state_end', state: currentState }); // 报告状态结束
+        self.postMessage({ type: 'tick', remainingSeconds: 0 });
+        self.postMessage({ type: 'state_end', state: state });
         return;
     }
-    
-    const remainingSeconds = Math.ceil(remainingMilliseconds / 1000);
-    self.postMessage({ type: 'tick', remainingSeconds: remainingSeconds });
 
-    // 检查是否该触发随机提示
-    if (currentState === 'working' && nextPingTime > 0 && now >= nextPingTime) {
-        self.postMessage({ type: 'random_ping' });
-        nextPingTime = 0; // 避免重复触发
-    }
-
+    self.postMessage({ type: 'tick', remainingSeconds: Math.ceil(remainingMilliseconds / 1000) });
     const delay = remainingMilliseconds % 1000;
-    timerTimeout = setTimeout(tick, delay > 0 ? delay : 1000);
+    timerTimeout = setTimeout(() => tick(targetTime, state), delay > 0 ? delay : 1000);
 }
 
-// 监听主页面的指令
 self.onmessage = function(e) {
     const { command, data } = e.data;
+    
+    clearTimeout(timerTimeout); // 收到任何指令前，先清除旧的计时器
 
-    switch (command) {
-        case 'start':
-            targetTime = data.targetTime;
-            nextPingTime = data.nextPingTime;
-            currentState = data.state;
-            tick();
-            break;
-
-        case 'pause':
-            clearTimeout(timerTimeout);
-            break;
-            
-        case 'resume':
-            targetTime = data.targetTime;
-            nextPingTime = data.nextPingTime;
-            currentState = data.state;
-            tick();
-            break;
-            
-        case 'update_ping':
-            nextPingTime = data.nextPingTime;
-            currentState = data.state;
-            break;
-
-        case 'stop':
-            clearTimeout(timerTimeout);
-            targetTime = 0;
-            nextPingTime = 0;
-            currentState = 'idle';
-            break;
+    if (command === 'start') {
+        tick(data.targetTime, data.state);
     }
+    // 'stop' 和 'pause' 只是简单地清除计时器，不再做任何其他事
 };
