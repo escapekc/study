@@ -84,25 +84,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-
             const dom = {
-                timerDisplay: document.getElementById('timer-display'),
-                statusMessage: document.getElementById('status-message'),
-                roundIndicator: document.getElementById('round-indicator'),
-                motivationQuote: document.getElementById('motivation-quote'),
-                settingsPanel: document.getElementById('settings-panel'),
-                startBtn: document.getElementById('start-btn'),
-                pauseBtn: document.getElementById('pause-btn'),
-                resetBtn: document.getElementById('reset-btn'),
-                highPitchSound: document.getElementById('high-pitch-sound'),
-                lowPitchSound: document.getElementById('low-pitch-sound'),
-                workDurationInput: document.getElementById('work-duration'),
-                randomMinInput: document.getElementById('random-min'),
-                randomMaxInput: document.getElementById('random-max'),
-                shortBreakInput: document.getElementById('short-break'),
-                totalRoundsInput: document.getElementById('total-rounds'),
-                longBreakInput: document.getElementById('long-break'),
-                showTimerToggle: document.getElementById('show-timer-toggle')
+                timerDisplay: document.getElementById('timer-display'), statusMessage: document.getElementById('status-message'), roundIndicator: document.getElementById('round-indicator'), motivationQuote: document.getElementById('motivation-quote'), settingsPanel: document.getElementById('settings-panel'), startBtn: document.getElementById('start-btn'), pauseBtn: document.getElementById('pause-btn'), resetBtn: document.getElementById('reset-btn'), highPitchSound: document.getElementById('high-pitch-sound'), lowPitchSound: document.getElementById('low-pitch-sound'), workDurationInput: document.getElementById('work-duration'), randomMinInput: document.getElementById('random-min'), randomMaxInput: document.getElementById('random-max'), shortBreakInput: document.getElementById('short-break'), totalRoundsInput: document.getElementById('total-rounds'), longBreakInput: document.getElementById('long-break'), showTimerToggle: document.getElementById('show-timer-toggle')
             };
 
             let currentState = 'idle';
@@ -110,6 +93,7 @@
             let timePaused = 0;
             let targetTime = 0;
             let remainingWorkTimeOnPing = 0;
+            let sessionSettings = null; // 关键改动: 用于“锁定”设置
 
             const motivationalQuotes = ["休息一下，是为了走更远的路。闭上眼，深呼吸。", "放下手机，让大脑回归宁静。", "此刻，世界与你无关。只关注自己的呼吸。", "冥想片刻，给思绪一次清扫。", "听一首舒缓的音乐，让心灵去旅行。", "拉伸一下身体，活动一下筋骨。", "成功的路上，休息也是一种策略。", "不要被短暂的娱乐绑架，你的目标更重要。", "每一次专注，都是一次自我超越。", "闭目养神，积蓄下一次爆发的力量。", "远离屏幕，看看窗外的风景。", "一杯温水，一份宁静。", "坚持就是胜利，但聪明的坚持包含休息。"];
             
@@ -117,37 +101,23 @@
 
             timerWorker.onmessage = (e) => {
                 const { type, remainingSeconds, state } = e.data;
-                switch(type) {
-                    case 'tick':
-                        displayTime(remainingSeconds);
-                        break;
-                    case 'state_end':
-                        handleStateTransition(state);
-                        break;
-                    case 'random_ping':
-                        triggerRandomPing();
-                        break;
-                }
+                if (type === 'tick') displayTime(remainingSeconds);
+                else if (type === 'state_end') handleStateTransition(state);
+                else if (type === 'random_ping') triggerRandomPing();
             };
             
             function playSound(soundElement) {
                 if (!soundElement) return;
                 soundElement.currentTime = 0;
                 const playPromise = soundElement.play();
-                if (playPromise) {
-                    playPromise.catch(error => {
-                        if (error.name !== 'AbortError') console.error(`Error playing sound: ${soundElement.id}`, error);
-                    });
-                }
+                if (playPromise) playPromise.catch(error => { if (error.name !== 'AbortError') console.error(`Error playing sound: ${soundElement.id}`, error); });
             }
             
-            function getSettings() {
-                // 关键修正: 全部使用 parseFloat 来支持小数
+            function getSettingsFromUI() {
                 const workDuration = parseFloat(dom.workDurationInput.value) * 60;
                 const randomMin = parseFloat(dom.randomMinInput.value) * 60;
                 const randomMax = parseFloat(dom.randomMaxInput.value) * 60;
                 const longBreak = parseFloat(dom.longBreakInput.value) * 60;
-                
                 return {
                     workDuration: isNaN(workDuration) || workDuration < 1 ? 100 * 60 : workDuration,
                     randomMin: isNaN(randomMin) || randomMin < 0 ? 2 * 60 : randomMin,
@@ -160,12 +130,11 @@
 
             function displayTime(seconds) {
                 const roundedSeconds = Math.ceil(seconds);
-                const mins = Math.floor(roundedSeconds / 60);
-                const secs = roundedSeconds % 60;
+                const mins = Math.floor(roundedSeconds / 60); const secs = roundedSeconds % 60;
                 dom.timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
             }
 
-            function updateInitialDisplay() { const settings = getSettings(); displayTime(settings.workDuration); }
+            function updateInitialDisplay() { const settings = getSettingsFromUI(); displayTime(settings.workDuration); }
             function toggleControls(isRunning, isPaused = false) { if (isRunning) { dom.startBtn.style.display = 'none'; dom.pauseBtn.style.display = 'inline-block'; dom.resetBtn.style.display = 'inline-block'; dom.settingsPanel.style.opacity = '0'; dom.settingsPanel.style.pointerEvents = 'none'; } else if (isPaused) { dom.startBtn.style.display = 'inline-block'; dom.startBtn.textContent = '继续'; dom.pauseBtn.style.display = 'none'; } else { dom.startBtn.style.display = 'inline-block'; dom.startBtn.textContent = '开始'; dom.pauseBtn.style.display = 'none'; dom.resetBtn.style.display = 'none'; dom.settingsPanel.style.opacity = '1'; dom.settingsPanel.style.pointerEvents = 'auto'; } }
             function getStatusText(state) { switch(state) { case 'working': return '专注中...'; case 'short_break': return '间歇休息'; case 'long_break': return '放松一下'; default: return ''; } }
 
@@ -173,40 +142,30 @@
                 playSound(dom.highPitchSound);
                 switch (endedState) {
                     case 'working':
-                        if (currentRound < getSettings().totalRounds) { startLongBreak(); } else { finishAllSessions(); }
+                        // 关键改动: 使用 sessionSettings 来判断
+                        if (currentRound < sessionSettings.totalRounds) { startLongBreak(); } else { finishAllSessions(); }
                         break;
-                    case 'short_break':
-                        resumeWorkSession();
-                        break;
-                    case 'long_break':
-                        currentRound++;
-                        startWorkSession();
-                        break;
+                    case 'short_break': resumeWorkSession(); break;
+                    case 'long_break': currentRound++; startWorkSession(); break;
                 }
             }
 
-            function triggerRandomPing() {
-                remainingWorkTimeOnPing = targetTime - Date.now();
-                playSound(dom.lowPitchSound);
-                setTimeout(() => { startShortBreak(); }, 200);
-            }
+            function triggerRandomPing() { remainingWorkTimeOnPing = targetTime - Date.now(); playSound(dom.lowPitchSound); setTimeout(() => { startShortBreak(); }, 200); }
 
             function startWorkSession() {
                 currentState = 'working';
-                const settings = getSettings();
-                targetTime = Date.now() + settings.workDuration * 1000;
+                targetTime = Date.now() + sessionSettings.workDuration * 1000;
                 dom.statusMessage.textContent = getStatusText(currentState);
-                dom.roundIndicator.textContent = `第 ${currentRound} / ${settings.totalRounds} 轮`;
+                dom.roundIndicator.textContent = `第 ${currentRound} / ${sessionSettings.totalRounds} 轮`;
                 dom.motivationQuote.textContent = "";
                 playSound(dom.highPitchSound);
-                const nextPingTime = scheduleRandomPing(settings, settings.workDuration);
+                const nextPingTime = scheduleRandomPing(sessionSettings.workDuration);
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime, state: currentState } });
             }
 
             function startShortBreak() {
                 currentState = 'short_break';
-                const settings = getSettings();
-                targetTime = Date.now() + settings.shortBreak * 1000;
+                targetTime = Date.now() + sessionSettings.shortBreak * 1000;
                 dom.statusMessage.textContent = getStatusText(currentState);
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime: 0, state: currentState } });
             }
@@ -215,40 +174,34 @@
                 currentState = 'working';
                 targetTime = Date.now() + remainingWorkTimeOnPing;
                 dom.statusMessage.textContent = getStatusText(currentState);
-                const nextPingTime = scheduleRandomPing(getSettings(), remainingWorkTimeOnPing / 1000);
+                const nextPingTime = scheduleRandomPing(remainingWorkTimeOnPing / 1000);
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime, state: currentState }});
             }
 
             function startLongBreak() {
-                const settings = getSettings();
-                if (settings.longBreak <= 0) { currentRound++; startWorkSession(); return; }
+                // 关键改动: 使用 sessionSettings
+                if (sessionSettings.longBreak <= 0) { currentRound++; startWorkSession(); return; }
                 currentState = 'long_break';
-                targetTime = Date.now() + settings.longBreak * 1000;
+                targetTime = Date.now() + sessionSettings.longBreak * 1000;
                 dom.statusMessage.textContent = getStatusText(currentState);
                 dom.motivationQuote.textContent = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime: 0, state: currentState } });
             }
 
-            function scheduleRandomPing(settings, durationInSeconds) {
-                const randomDelaySeconds = Math.floor(Math.random() * (settings.randomMax - settings.randomMin + 1)) + settings.randomMin;
+            function scheduleRandomPing(durationInSeconds) {
+                const { randomMin, randomMax } = sessionSettings; // 使用 sessionSettings
+                const randomDelaySeconds = Math.floor(Math.random() * (randomMax - randomMin + 1)) + randomMin;
                 if (randomDelaySeconds < durationInSeconds) { return Date.now() + randomDelaySeconds * 1000; }
                 return 0;
             }
 
-            function pauseTimer() {
-                timerWorker.postMessage({ command: 'pause' });
-                timePaused = Date.now();
-                pauseBtn.dataset.lastState = currentState;
-                currentState = 'paused';
-                dom.statusMessage.textContent = "已暂停";
-                toggleControls(false, true);
-            }
+            function pauseTimer() { timerWorker.postMessage({ command: 'pause' }); timePaused = Date.now(); pauseBtn.dataset.lastState = currentState; currentState = 'paused'; dom.statusMessage.textContent = "已暂停"; toggleControls(false, true); }
             
             function resumeTimer() {
                 const pauseDuration = Date.now() - timePaused;
                 targetTime += pauseDuration;
                 currentState = pauseBtn.dataset.lastState;
-                const nextPingTime = scheduleRandomPing(getSettings(), (targetTime - Date.now()) / 1000);
+                const nextPingTime = scheduleRandomPing((targetTime - Date.now()) / 1000);
                 dom.statusMessage.textContent = getStatusText(currentState);
                 timerWorker.postMessage({ command: 'resume', data: { targetTime, nextPingTime, state: currentState } });
                 toggleControls(true);
@@ -258,6 +211,7 @@
                 timerWorker.postMessage({ command: 'stop' });
                 currentState = 'idle';
                 currentRound = 1;
+                sessionSettings = null; // 关键改动: 重置“任务清单”
                 updateInitialDisplay();
                 dom.statusMessage.textContent = "请设置参数后开始";
                 dom.roundIndicator.textContent = "";
@@ -265,14 +219,11 @@
                 toggleControls(false);
             }
 
-            function finishAllSessions() {
-                dom.statusMessage.textContent = "恭喜！所有轮次已完成！";
-                dom.motivationQuote.textContent = "你做到了！给自己一个大大的赞赏！";
-                dom.roundIndicator.textContent = "";
-                resetTimer();
-            }
+            function finishAllSessions() { dom.statusMessage.textContent = "恭喜！所有轮次已完成！"; dom.motivationQuote.textContent = "你做到了！给自己一个大大的赞赏！"; dom.roundIndicator.textContent = ""; resetTimer(); }
 
             function startTimer() {
+                // 关键改动: 在这里“锁定”设置
+                sessionSettings = getSettingsFromUI(); 
                 currentRound = 1;
                 startWorkSession();
                 toggleControls(true);
