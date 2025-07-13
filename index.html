@@ -5,119 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高级专注力计时器</title>
     <style>
-        :root {
-            --bg-color: #121212;
-            --primary-text-color: #E0E0E0;
-            --secondary-text-color: #B0B0B0;
-            --accent-color: #4CAF50;
-            --panel-bg-color: #1E1E1E;
-            --border-color: #333;
-            --danger-color: #F44336;
-        }
+        :root { --bg-color: #121212; --primary-text-color: #E0E0E0; --secondary-text-color: #B0B0B0; --accent-color: #4CAF50; --panel-bg-color: #1E1E1E; --border-color: #333; --danger-color: #F44336; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--primary-text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            text-align: center;
-            padding: 15px;
-        }
-        .app-container {
-            width: 100%;
-            max-width: 600px;
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-        .timer-display-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        #timer-display {
-            font-size: clamp(6rem, 25vw, 12rem);
-            font-weight: bold;
-            line-height: 1;
-            transition: opacity 0.3s ease;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--bg-color); color: var(--primary-text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; padding: 15px; }
+        .app-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 25px; }
+        .timer-display-area { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #timer-display { font-size: clamp(6rem, 25vw, 12rem); font-weight: bold; line-height: 1; transition: opacity 0.3s ease; }
         #timer-display.hidden { opacity: 0; }
-        #status-message, #round-indicator {
-            font-size: clamp(1.2rem, 4vw, 1.8rem);
-            color: var(--secondary-text-color);
-            min-height: 2.5rem;
-            padding: 0 10px;
-        }
-        #motivation-quote {
-            font-size: clamp(1rem, 3.5vw, 1.5rem);
-            color: var(--accent-color);
-            font-style: italic;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 15px;
-        }
-        #settings-panel {
-            background-color: var(--panel-bg-color);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            transition: opacity 0.5s, transform 0.5s;
-        }
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .setting-item label {
-            font-size: 1rem;
-            text-align: left;
-            flex-shrink: 0;
-        }
-        .setting-item input[type="number"] {
-            width: 70px;
-            padding: 8px;
-            background-color: var(--bg-color);
-            color: var(--primary-text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            text-align: center;
-            font-size: 1rem;
-        }
+        #status-message, #round-indicator { font-size: clamp(1.2rem, 4vw, 1.8rem); color: var(--secondary-text-color); min-height: 2.5rem; padding: 0 10px; }
+        #motivation-quote { font-size: clamp(1rem, 3.5vw, 1.5rem); color: var(--accent-color); font-style: italic; min-height: 60px; display: flex; align-items: center; justify-content: center; padding: 0 15px; }
+        #settings-panel { background-color: var(--panel-bg-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px; transition: opacity 0.5s, transform 0.5s; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .setting-item label { font-size: 1rem; text-align: left; flex-shrink: 0; }
+        .setting-item input[type="number"] { width: 70px; padding: 8px; background-color: var(--bg-color); color: var(--primary-text-color); border: 1px solid var(--border-color); border-radius: 6px; text-align: center; font-size: 1rem; }
         .setting-item input[type="number"]::-webkit-inner-spin-button, .setting-item input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .setting-item input[type="number"] { -moz-appearance: textfield; }
         .setting-item.checkbox-item { justify-content: flex-start; gap: 15px; }
-        input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            accent-color: var(--accent-color);
-        }
-        #controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        .control-btn {
-            padding: 12px 25px;
-            font-size: 1.1rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.1s;
-            color: white;
-            font-weight: bold;
-        }
+        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); }
+        #controls { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .control-btn { padding: 12px 25px; font-size: 1.1rem; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.3s, transform 0.1s; color: white; font-weight: bold; }
         #start-btn { background-color: var(--accent-color); }
         #start-btn:hover { background-color: #5cb85c; }
         #pause-btn { background-color: #f0ad4e; display: none; }
@@ -173,8 +79,9 @@
         </div>
     </div>
     
-    <audio id="high-pitch-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-951.mp3" preload="auto"></audio>
-    <audio id="low-pitch-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto"></audio>
+    <!-- 关键改动: src现在指向您仓库中的本地文件 -->
+    <audio id="high-pitch-sound" src="high.mp3" preload="auto"></audio>
+    <audio id="low-pitch-sound" src="low.mp3" preload="auto"></audio>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -205,7 +112,6 @@
 
             function unlockAudio() {
                 if (isAudioUnlocked || !highPitchSound || !lowPitchSound) return;
-                
                 try {
                     highPitchSound.volume = 0;
                     const highPromise = highPitchSound.play();
@@ -214,23 +120,13 @@
                     const lowPromise = lowPitchSound.play();
                     
                     if (highPromise !== undefined) {
-                        highPromise.then(() => {
-                            highPitchSound.pause();
-                            highPitchSound.volume = 1;
-                        }).catch(() => {});
+                        highPromise.then(() => { highPitchSound.pause(); highPitchSound.volume = 1; }).catch(() => {});
                     }
                     if (lowPromise !== undefined) {
-                        lowPromise.then(() => {
-                            lowPitchSound.pause();
-                            lowPitchSound.volume = 1;
-                        }).catch(() => {});
+                        lowPromise.then(() => { lowPitchSound.pause(); lowPitchSound.volume = 1; }).catch(() => {});
                     }
-
                     isAudioUnlocked = true;
-                    console.log("Audio unlocked successfully.");
-                } catch (e) {
-                    console.error("Error during audio unlock:", e);
-                }
+                } catch (e) {}
             }
 
             function playSound(soundElement) {
