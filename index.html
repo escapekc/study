@@ -3,15 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>去到你想去的地方</title>
+    <title>高级专注力计时器</title>
     <style>
         :root { --bg-color: #121212; --primary-text-color: #E0E0E0; --secondary-text-color: #B0B0B0; --accent-color: #4CAF50; --panel-bg-color: #1E1E1E; --border-color: #333; --danger-color: #F44336; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--bg-color); color: var(--primary-text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; padding: 15px; }
         .app-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 25px; }
-        .timer-display-area { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .timer-display-area { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         #timer-display { font-size: clamp(6rem, 25vw, 12rem); font-weight: bold; line-height: 1; transition: opacity 0.3s ease; }
         #timer-display.hidden { opacity: 0; }
+        /* 新增: 小憩计时器样式 */
+        #short-break-timer {
+            font-size: clamp(1.5rem, 6vw, 2.5rem);
+            color: var(--accent-color);
+            position: absolute;
+            bottom: -35px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none; /* 不阻挡下方元素 */
+        }
+        #short-break-timer.visible {
+            opacity: 1;
+        }
         #status-message, #round-indicator { font-size: clamp(1.2rem, 4vw, 1.8rem); color: var(--secondary-text-color); min-height: 2.5rem; padding: 0 10px; }
         #motivation-quote { font-size: clamp(1rem, 3.5vw, 1.5rem); color: var(--accent-color); font-style: italic; min-height: 60px; display: flex; align-items: center; justify-content: center; padding: 0 15px; }
         #settings-panel { background-color: var(--panel-bg-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px; transition: opacity 0.5s, transform 0.5s; }
@@ -39,38 +52,19 @@
         <div class="timer-display-area">
             <div id="round-indicator"></div>
             <div id="timer-display">00:00</div>
+            <!-- 新增: 小憩计时器容器 -->
+            <div id="short-break-timer"></div> 
             <div id="status-message">请设置参数后开始</div>
             <div id="motivation-quote"></div>
         </div>
         <div id="settings-panel">
-            <div class="setting-item">
-                <label for="work-duration">每轮时长 (分钟):</label>
-                <input type="number" id="work-duration" value="100" min="0.1" step="0.1">
-            </div>
-            <div class="setting-item">
-                <label for="random-min">随机提示 (分钟):</label>
-                <div>
-                    <input type="number" id="random-min" value="2" min="0" step="0.1">
-                    <span>到</span>
-                    <input type="number" id="random-max" value="5" min="0" step="0.1">
-                </div>
-            </div>
-            <div class="setting-item">
-                <label for="short-break">间歇休息 (秒):</label>
-                <input type="number" id="short-break" value="10" min="1">
-            </div>
-            <div class="setting-item">
-                <label for="total-rounds">总轮数:</label>
-                <input type="number" id="total-rounds" value="1" min="1">
-            </div>
-            <div class="setting-item">
-                <label for="long-break">轮间休息 (分钟):</label>
-                <input type="number" id="long-break" value="20" min="0" step="0.1">
-            </div>
-             <div class="setting-item checkbox-item">
-                <input type="checkbox" id="show-timer-toggle" checked>
-                <label for="show-timer-toggle">显示倒计时</label>
-            </div>
+            <!-- (设置面板内容保持不变) -->
+            <div class="setting-item"><label for="work-duration">每轮时长 (分钟):</label><input type="number" id="work-duration" value="100" min="0.1" step="0.1"></div>
+            <div class="setting-item"><label for="random-min">随机提示 (分钟):</label><div><input type="number" id="random-min" value="2" min="0" step="0.1"><span>到</span><input type="number" id="random-max" value="5" min="0" step="0.1"></div></div>
+            <div class="setting-item"><label for="short-break">间歇休息 (秒):</label><input type="number" id="short-break" value="10" min="1"></div>
+            <div class="setting-item"><label for="total-rounds">总轮数:</label><input type="number" id="total-rounds" value="1" min="1"></div>
+            <div class="setting-item"><label for="long-break">轮间休息 (分钟):</label><input type="number" id="long-break" value="20" min="0" step="0.1"></div>
+            <div class="setting-item checkbox-item"><input type="checkbox" id="show-timer-toggle" checked><label for="show-timer-toggle">显示倒计时</label></div>
         </div>
         <div id="controls">
             <button id="start-btn" class="control-btn">开始</button>
@@ -81,16 +75,17 @@
     
     <audio id="high-pitch-sound" src="high.mp3" preload="auto"></audio>
     <audio id="low-pitch-sound" src="low.mp3" preload="auto"></audio>
+    <!-- 新增: 用于后台保活的无声音频 -->
+    <audio id="silent-audio" src="silent.mp3" loop preload="auto"></audio>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const dom = {
-                timerDisplay: document.getElementById('timer-display'), statusMessage: document.getElementById('status-message'), roundIndicator: document.getElementById('round-indicator'), motivationQuote: document.getElementById('motivation-quote'), settingsPanel: document.getElementById('settings-panel'), startBtn: document.getElementById('start-btn'), pauseBtn: document.getElementById('pause-btn'), resetBtn: document.getElementById('reset-btn'), highPitchSound: document.getElementById('high-pitch-sound'), lowPitchSound: document.getElementById('low-pitch-sound'), workDurationInput: document.getElementById('work-duration'), randomMinInput: document.getElementById('random-min'), randomMaxInput: document.getElementById('random-max'), shortBreakInput: document.getElementById('short-break'), totalRoundsInput: document.getElementById('total-rounds'), longBreakInput: document.getElementById('long-break'), showTimerToggle: document.getElementById('show-timer-toggle')
+                timerDisplay: document.getElementById('timer-display'), shortBreakTimer: document.getElementById('short-break-timer'), statusMessage: document.getElementById('status-message'), roundIndicator: document.getElementById('round-indicator'), motivationQuote: document.getElementById('motivation-quote'), settingsPanel: document.getElementById('settings-panel'), startBtn: document.getElementById('start-btn'), pauseBtn: document.getElementById('pause-btn'), resetBtn: document.getElementById('reset-btn'), highPitchSound: document.getElementById('high-pitch-sound'), lowPitchSound: document.getElementById('low-pitch-sound'), silentAudio: document.getElementById('silent-audio'), workDurationInput: document.getElementById('work-duration'), randomMinInput: document.getElementById('random-min'), randomMaxInput: document.getElementById('random-max'), shortBreakInput: document.getElementById('short-break'), totalRoundsInput: document.getElementById('total-rounds'), longBreakInput: document.getElementById('long-break'), showTimerToggle: document.getElementById('show-timer-toggle')
             };
 
             let currentState = 'idle';
             let currentRound = 1;
-            let timePaused = 0;
             let targetTime = 0;
             let remainingTimeOnPause = 0;
             let sessionSettings = null; 
@@ -103,12 +98,19 @@
             timerWorker.onmessage = (e) => {
                 if (currentState === 'idle' || currentState === 'paused') return;
                 const { type, state: endedState } = e.data;
+                
                 if (type === 'tick') {
-                    displayTime(e.data.remainingSeconds);
+                    // UI改动: 如果在小憩，只更新小计时器，否则更新大计时器
+                    if (currentState === 'short_break') {
+                        dom.shortBreakTimer.textContent = `小憩: ${e.data.remainingSeconds}s`;
+                    } else {
+                        displayTime(e.data.remainingSeconds);
+                    }
                 } else if (type === 'state_end') {
                     switch (endedState) {
                         case 'working':
                             playSound(dom.highPitchSound);
+                            clearTimeout(randomPingTimeout); // 确保旧的随机计时器被清除
                             if (currentRound < sessionSettings.totalRounds) {
                                 currentRound++;
                                 startLongBreak();
@@ -122,6 +124,8 @@
                             break;
                         case 'short_break':
                             playSound(dom.highPitchSound);
+                            // UI改动: 隐藏小计时器
+                            dom.shortBreakTimer.classList.remove('visible');
                             resumeWorkSession();
                             break;
                     }
@@ -155,7 +159,8 @@
             function toggleControls(isRunning, isPaused = false) { if (isRunning) { dom.startBtn.style.display = 'none'; dom.pauseBtn.style.display = 'inline-block'; dom.resetBtn.style.display = 'inline-block'; dom.settingsPanel.style.opacity = '0'; dom.settingsPanel.style.pointerEvents = 'none'; } else if (isPaused) { dom.startBtn.style.display = 'inline-block'; dom.startBtn.textContent = '继续'; dom.pauseBtn.style.display = 'none'; } else { dom.startBtn.style.display = 'inline-block'; dom.startBtn.textContent = '开始'; dom.pauseBtn.style.display = 'none'; dom.resetBtn.style.display = 'none'; dom.settingsPanel.style.opacity = '1'; dom.settingsPanel.style.pointerEvents = 'auto'; } }
             
             function updateStatusText() {
-                dom.statusMessage.textContent = { working: '专注中...', short_break: '间歇休息', long_break: '放松一下', idle: '请设置参数后开始', paused: '已暂停' }[currentState] || '';
+                const statusMap = { working: '专注中...', short_break: '间歇休息', long_break: '放松一下', idle: '请设置参数后开始', paused: '已暂停' };
+                dom.statusMessage.textContent = statusMap[currentState] || '';
                 if(currentState === 'long_break' && sessionSettings) {
                     dom.roundIndicator.textContent = `准备开始第 ${currentRound} 轮...`;
                 } else if (currentState === 'working' && sessionSettings) {
@@ -171,25 +176,27 @@
             }
 
             function triggerRandomPing() {
-                timerWorker.postMessage({ command: 'pause' }); // 命令worker暂停
-                clearTimeout(randomPingTimeout); // 清除主线程的随机计时器
+                timerWorker.postMessage({ command: 'pause' });
+                clearTimeout(randomPingTimeout);
                 playSound(dom.lowPitchSound);
                 remainingTimeOnPause = targetTime - Date.now();
-                setTimeout(startShortBreak, 200);
+                setTimeout(startShortBreak, 100); // 延迟改为 100ms
             }
 
             function startWorkSession() {
-                dom.motivationQuote.textContent = ""; // 关键修正: 在开始工作时清除激励语
+                dom.motivationQuote.textContent = "";
                 startTimer(sessionSettings.workDuration, 'working');
                 scheduleRandomPing();
             }
 
             function startShortBreak() {
+                // UI改动: 显示小计时器
+                dom.shortBreakTimer.classList.add('visible');
                 startTimer(sessionSettings.shortBreak, 'short_break');
             }
             
             function resumeWorkSession() {
-                dom.motivationQuote.textContent = ""; // 关键修正: 恢复工作时也要清除激励语
+                dom.motivationQuote.textContent = "";
                 startTimer(remainingTimeOnPause / 1000, 'working');
                 scheduleRandomPing();
             }
@@ -208,6 +215,7 @@
                 clearTimeout(randomPingTimeout);
                 const durationInSeconds = (targetTime - Date.now()) / 1000;
                 const { randomMin, randomMax } = sessionSettings;
+                if (randomMin >= randomMax) return; // 避免无效范围
                 const randomDelaySeconds = Math.floor(Math.random() * (randomMax - randomMin + 1)) + randomMin;
                 if (randomDelaySeconds < durationInSeconds) {
                     randomPingTimeout = setTimeout(triggerRandomPing, randomDelaySeconds * 1000);
@@ -218,10 +226,12 @@
                 timerWorker.postMessage({ command: 'pause' });
                 clearTimeout(randomPingTimeout);
                 remainingTimeOnPause = targetTime - Date.now();
-                dom.pauseBtn.dataset.lastState = currentState; // 记录暂停前的状态
+                dom.pauseBtn.dataset.lastState = currentState;
                 currentState = 'paused';
                 updateStatusText();
                 toggleControls(false, true);
+                // 暂停时也暂停无声音频
+                dom.silentAudio.pause();
             }
             
             function resumeTimer() {
@@ -231,6 +241,8 @@
                     scheduleRandomPing();
                 }
                 toggleControls(true);
+                // 恢复时播放无声音频
+                playSound(dom.silentAudio);
             }
 
             function resetTimer() {
@@ -243,7 +255,10 @@
                 updateStatusText();
                 dom.roundIndicator.textContent = "";
                 dom.motivationQuote.textContent = "";
+                dom.shortBreakTimer.classList.remove('visible'); // 清除小计时器
                 toggleControls(false);
+                // 重置时暂停无声音频
+                dom.silentAudio.pause();
             }
 
             function finishAllSessions() {
@@ -257,6 +272,8 @@
                 sessionSettings = getSettingsFromUI(); 
                 currentRound = 1;
                 playSound(dom.highPitchSound);
+                // 关键改动: 播放无声音频以保活
+                playSound(dom.silentAudio);
                 startWorkSession();
                 toggleControls(true);
             }
