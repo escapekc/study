@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高级专注力计时器 (息屏版)</title>
+    <title>去到你想去的地方</title>
     <style>
         :root { --bg-color: #121212; --primary-text-color: #E0E0E0; --secondary-text-color: #B0B0B0; --accent-color: #4CAF50; --panel-bg-color: #1E1E1E; --border-color: #333; --danger-color: #F44336; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -45,7 +45,7 @@
         <div id="settings-panel">
             <div class="setting-item">
                 <label for="work-duration">每轮时长 (分钟):</label>
-                <input type="number" id="work-duration" value="100" min="1">
+                <input type="number" id="work-duration" value="100" min="0.1" step="0.1">
             </div>
             <div class="setting-item">
                 <label for="random-min">随机提示 (分钟):</label>
@@ -65,7 +65,7 @@
             </div>
             <div class="setting-item">
                 <label for="long-break">轮间休息 (分钟):</label>
-                <input type="number" id="long-break" value="20" min="0">
+                <input type="number" id="long-break" value="20" min="0" step="0.1">
             </div>
              <div class="setting-item checkbox-item">
                 <input type="checkbox" id="show-timer-toggle" checked>
@@ -113,12 +113,10 @@
 
             const motivationalQuotes = ["休息一下，是为了走更远的路。闭上眼，深呼吸。", "放下手机，让大脑回归宁静。", "此刻，世界与你无关。只关注自己的呼吸。", "冥想片刻，给思绪一次清扫。", "听一首舒缓的音乐，让心灵去旅行。", "拉伸一下身体，活动一下筋骨。", "成功的路上，休息也是一种策略。", "不要被短暂的娱乐绑架，你的目标更重要。", "每一次专注，都是一次自我超越。", "闭目养神，积蓄下一次爆发的力量。", "远离屏幕，看看窗外的风景。", "一杯温水，一份宁静。", "坚持就是胜利，但聪明的坚持包含休息。"];
             
-            // 初始化 Web Worker
             let timerWorker = new Worker('worker.js');
 
             timerWorker.onmessage = (e) => {
                 const { type, remainingSeconds, state } = e.data;
-                
                 switch(type) {
                     case 'tick':
                         displayTime(remainingSeconds);
@@ -144,20 +142,29 @@
             }
             
             function getSettings() {
+                // 关键修正: 全部使用 parseFloat 来支持小数
                 const workDuration = parseFloat(dom.workDurationInput.value) * 60;
                 const randomMin = parseFloat(dom.randomMinInput.value) * 60;
                 const randomMax = parseFloat(dom.randomMaxInput.value) * 60;
+                const longBreak = parseFloat(dom.longBreakInput.value) * 60;
+                
                 return {
                     workDuration: isNaN(workDuration) || workDuration < 1 ? 100 * 60 : workDuration,
                     randomMin: isNaN(randomMin) || randomMin < 0 ? 2 * 60 : randomMin,
                     randomMax: isNaN(randomMax) || randomMax < randomMin ? 5 * 60 : randomMax,
                     shortBreak: parseInt(dom.shortBreakInput.value, 10) || 10,
                     totalRounds: parseInt(dom.totalRoundsInput.value, 10) || 1,
-                    longBreak: parseInt(dom.longBreakInput.value) * 60 || 20 * 60,
+                    longBreak: isNaN(longBreak) || longBreak < 0 ? 20 * 60 : longBreak,
                 };
             }
 
-            function displayTime(seconds) { dom.timerDisplay.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`; }
+            function displayTime(seconds) {
+                const roundedSeconds = Math.ceil(seconds);
+                const mins = Math.floor(roundedSeconds / 60);
+                const secs = roundedSeconds % 60;
+                dom.timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+
             function updateInitialDisplay() { const settings = getSettings(); displayTime(settings.workDuration); }
             function toggleControls(isRunning, isPaused = false) { if (isRunning) { dom.startBtn.style.display = 'none'; dom.pauseBtn.style.display = 'inline-block'; dom.resetBtn.style.display = 'inline-block'; dom.settingsPanel.style.opacity = '0'; dom.settingsPanel.style.pointerEvents = 'none'; } else if (isPaused) { dom.startBtn.style.display = 'inline-block'; dom.startBtn.textContent = '继续'; dom.pauseBtn.style.display = 'none'; } else { dom.startBtn.style.display = 'inline-block'; dom.startBtn.textContent = '开始'; dom.pauseBtn.style.display = 'none'; dom.resetBtn.style.display = 'none'; dom.settingsPanel.style.opacity = '1'; dom.settingsPanel.style.pointerEvents = 'auto'; } }
             function getStatusText(state) { switch(state) { case 'working': return '专注中...'; case 'short_break': return '间歇休息'; case 'long_break': return '放松一下'; default: return ''; } }
@@ -181,24 +188,18 @@
             function triggerRandomPing() {
                 remainingWorkTimeOnPing = targetTime - Date.now();
                 playSound(dom.lowPitchSound);
-                // 关键改动: 延迟UI更新以匹配音频
-                setTimeout(() => {
-                    startShortBreak();
-                }, 200); // 延迟200毫秒
+                setTimeout(() => { startShortBreak(); }, 200);
             }
 
             function startWorkSession() {
                 currentState = 'working';
                 const settings = getSettings();
                 targetTime = Date.now() + settings.workDuration * 1000;
-                
                 dom.statusMessage.textContent = getStatusText(currentState);
                 dom.roundIndicator.textContent = `第 ${currentRound} / ${settings.totalRounds} 轮`;
                 dom.motivationQuote.textContent = "";
-
                 playSound(dom.highPitchSound);
                 const nextPingTime = scheduleRandomPing(settings, settings.workDuration);
-                
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime, state: currentState } });
             }
 
@@ -206,7 +207,6 @@
                 currentState = 'short_break';
                 const settings = getSettings();
                 targetTime = Date.now() + settings.shortBreak * 1000;
-                
                 dom.statusMessage.textContent = getStatusText(currentState);
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime: 0, state: currentState } });
             }
@@ -214,31 +214,24 @@
             function resumeWorkSession() {
                 currentState = 'working';
                 targetTime = Date.now() + remainingWorkTimeOnPing;
-                
                 dom.statusMessage.textContent = getStatusText(currentState);
                 const nextPingTime = scheduleRandomPing(getSettings(), remainingWorkTimeOnPing / 1000);
-
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime, state: currentState }});
             }
 
             function startLongBreak() {
                 const settings = getSettings();
                 if (settings.longBreak <= 0) { currentRound++; startWorkSession(); return; }
-                
                 currentState = 'long_break';
                 targetTime = Date.now() + settings.longBreak * 1000;
-                
                 dom.statusMessage.textContent = getStatusText(currentState);
                 dom.motivationQuote.textContent = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
-                
                 timerWorker.postMessage({ command: 'start', data: { targetTime, nextPingTime: 0, state: currentState } });
             }
 
             function scheduleRandomPing(settings, durationInSeconds) {
                 const randomDelaySeconds = Math.floor(Math.random() * (settings.randomMax - settings.randomMin + 1)) + settings.randomMin;
-                if (randomDelaySeconds < durationInSeconds) {
-                    return Date.now() + randomDelaySeconds * 1000;
-                }
+                if (randomDelaySeconds < durationInSeconds) { return Date.now() + randomDelaySeconds * 1000; }
                 return 0;
             }
 
@@ -255,9 +248,7 @@
                 const pauseDuration = Date.now() - timePaused;
                 targetTime += pauseDuration;
                 currentState = pauseBtn.dataset.lastState;
-
                 const nextPingTime = scheduleRandomPing(getSettings(), (targetTime - Date.now()) / 1000);
-                
                 dom.statusMessage.textContent = getStatusText(currentState);
                 timerWorker.postMessage({ command: 'resume', data: { targetTime, nextPingTime, state: currentState } });
                 toggleControls(true);
