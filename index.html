@@ -93,7 +93,7 @@
             let timePaused = 0;
             let targetTime = 0;
             let remainingWorkTimeOnPing = 0;
-            let sessionSettings = null; // 关键改动: 用于“锁定”设置
+            let sessionSettings = null; 
 
             const motivationalQuotes = ["休息一下，是为了走更远的路。闭上眼，深呼吸。", "放下手机，让大脑回归宁静。", "此刻，世界与你无关。只关注自己的呼吸。", "冥想片刻，给思绪一次清扫。", "听一首舒缓的音乐，让心灵去旅行。", "拉伸一下身体，活动一下筋骨。", "成功的路上，休息也是一种策略。", "不要被短暂的娱乐绑架，你的目标更重要。", "每一次专注，都是一次自我超越。", "闭目养神，积蓄下一次爆发的力量。", "远离屏幕，看看窗外的风景。", "一杯温水，一份宁静。", "坚持就是胜利，但聪明的坚持包含休息。"];
             
@@ -139,10 +139,15 @@
             function getStatusText(state) { switch(state) { case 'working': return '专注中...'; case 'short_break': return '间歇休息'; case 'long_break': return '放松一下'; default: return ''; } }
 
             function handleStateTransition(endedState) {
+                // 关键修正: 添加“安全检查”
+                if (!sessionSettings) {
+                    // 如果任务清单不存在（已被重置），则忽略这条过期的报告
+                    return; 
+                }
+
                 playSound(dom.highPitchSound);
                 switch (endedState) {
                     case 'working':
-                        // 关键改动: 使用 sessionSettings 来判断
                         if (currentRound < sessionSettings.totalRounds) { startLongBreak(); } else { finishAllSessions(); }
                         break;
                     case 'short_break': resumeWorkSession(); break;
@@ -179,7 +184,6 @@
             }
 
             function startLongBreak() {
-                // 关键改动: 使用 sessionSettings
                 if (sessionSettings.longBreak <= 0) { currentRound++; startWorkSession(); return; }
                 currentState = 'long_break';
                 targetTime = Date.now() + sessionSettings.longBreak * 1000;
@@ -189,7 +193,7 @@
             }
 
             function scheduleRandomPing(durationInSeconds) {
-                const { randomMin, randomMax } = sessionSettings; // 使用 sessionSettings
+                const { randomMin, randomMax } = sessionSettings;
                 const randomDelaySeconds = Math.floor(Math.random() * (randomMax - randomMin + 1)) + randomMin;
                 if (randomDelaySeconds < durationInSeconds) { return Date.now() + randomDelaySeconds * 1000; }
                 return 0;
@@ -211,7 +215,7 @@
                 timerWorker.postMessage({ command: 'stop' });
                 currentState = 'idle';
                 currentRound = 1;
-                sessionSettings = null; // 关键改动: 重置“任务清单”
+                sessionSettings = null;
                 updateInitialDisplay();
                 dom.statusMessage.textContent = "请设置参数后开始";
                 dom.roundIndicator.textContent = "";
@@ -222,7 +226,6 @@
             function finishAllSessions() { dom.statusMessage.textContent = "恭喜！所有轮次已完成！"; dom.motivationQuote.textContent = "你做到了！给自己一个大大的赞赏！"; dom.roundIndicator.textContent = ""; resetTimer(); }
 
             function startTimer() {
-                // 关键改动: 在这里“锁定”设置
                 sessionSettings = getSettingsFromUI(); 
                 currentRound = 1;
                 startWorkSession();
